@@ -1,0 +1,130 @@
+{
+  "id": "watts-standard-elements",
+  "version": "2026.10-1",
+  "source": "WATTS Perform Time Study catalog (9 categories x 8 elements). Element names, categories and lean types are copied verbatim from WATTS so voice studies aggregate with tap studies. Codes and aliases are WATTS Voice additions.",
+  "leanTypes": {
+    "VA":   { "label": "Value Added",                     "short": "VA",   "color": "#00a884", "description": "Physically transforms the product toward what the customer pays for (drilling, fastening, installing, testing)." },
+    "NVAN": { "label": "Non-Value Added - Necessary",     "short": "NVAN", "color": "#636e72", "description": "Required by the business or regulation but adds no form/fit/function (inspection, paperwork, reading work instructions)." },
+    "NVAW": { "label": "Non-Value Added - Waste / Rework", "short": "NVAW", "color": "#f0a92e", "description": "Avoidable work: material handling, searching, travel, rework, disassembly, test troubleshooting." },
+    "NVAD": { "label": "Non-Value Added - Delay",         "short": "NVAD", "color": "#e94560", "description": "Mechanic is waiting or stopped: waiting for QA/parts/tools/engineering, equipment down, personal time." }
+  },
+  "categories": [
+    {
+      "code": "FAS", "name": "Fastener Installation", "defaultType": "VA",
+      "elements": [
+        { "id": "FAS-01", "name": "Drilling Hole",        "type": "VA", "aliases": ["drilling", "drill", "drill hole", "drilling holes", "pilot hole", "pilot drilling", "reaming", "ream hole", "drill to size", "full size drilling"] },
+        { "id": "FAS-02", "name": "Deburring",            "type": "VA", "aliases": ["deburr", "deburring holes", "debur", "break edges", "removing burrs"] },
+        { "id": "FAS-03", "name": "Countersinking",       "type": "VA", "aliases": ["countersink", "c-sink", "csk", "cutting countersinks", "spot face", "spotfacing"] },
+        { "id": "FAS-04", "name": "Installing Rivet",     "type": "VA", "aliases": ["rivet", "riveting", "bucking rivets", "shooting rivets", "install rivets", "squeezing rivets", "blind rivets", "rivet gun"] },
+        { "id": "FAS-05", "name": "Installing Hi-Lok",    "type": "VA", "aliases": ["hi-lok", "hilok", "hi lok", "high lock", "hi-lite", "hi lite", "lockbolt", "lock bolt", "installing collars", "swaging collars", "collar"] },
+        { "id": "FAS-06", "name": "Installing Bolt",      "type": "VA", "aliases": ["bolt", "bolts", "install bolts", "installing nuts", "nut and bolt", "installing screws", "screws", "install fasteners", "installing fasteners", "fastener install"] },
+        { "id": "FAS-07", "name": "Torquing Fastener",    "type": "VA", "aliases": ["torque", "torquing", "torque wrench", "torquing bolts", "torquing nuts", "final torque", "tightening fasteners", "tightening bolts"] },
+        { "id": "FAS-08", "name": "Applying Wet Sealant", "type": "VA", "aliases": ["wet install", "wet installing fasteners", "wet sealant", "dipping fasteners", "sealant on fasteners", "fastener sealant", "buttering fasteners"] }
+      ]
+    },
+    {
+      "code": "ASM", "name": "Assembly Operations", "defaultType": "VA",
+      "elements": [
+        { "id": "ASM-01", "name": "Part Fitting",        "type": "VA", "aliases": ["fitting", "fit up", "fit part", "fitting the part", "test fit", "fit check", "aligning parts", "trimming to fit"] },
+        { "id": "ASM-02", "name": "Shimming",            "type": "VA", "aliases": ["shim", "shims", "liquid shim", "peel shim", "peeling shims", "measuring for shims", "shim gap"] },
+        { "id": "ASM-03", "name": "Clamping/Fixturing",  "type": "VA", "aliases": ["clamping", "clamp", "clecos", "cleco", "installing clecos", "temporary fasteners", "fixture", "fixturing", "tooling pins"] },
+        { "id": "ASM-04", "name": "Applying Adhesive",   "type": "VA", "aliases": ["adhesive", "glue", "gluing", "epoxy", "potting", "bonding adhesive"] },
+        { "id": "ASM-05", "name": "Fay Surface Sealing", "type": "VA", "aliases": ["fay seal", "fay surface", "faying surface", "sealing", "sealant", "sealant work", "applying sealant", "seal", "fillet seal", "fillet sealing", "sealant bead", "brush coat sealant"] },
+        { "id": "ASM-06", "name": "Component Install",   "type": "VA", "aliases": ["install component", "installing component", "install part", "installing parts", "installing bracket", "bracket install", "installing clip", "mounting", "mount", "hanging the part"] },
+        { "id": "ASM-07", "name": "Panel Installation",  "type": "VA", "aliases": ["panel", "install panel", "installing panel", "hanging panel", "access panel", "floor panel", "skin panel", "panel install"] },
+        { "id": "ASM-08", "name": "Tube/Duct Fitting",   "type": "VA", "aliases": ["tube", "tubing", "duct", "ducting", "hydraulic line", "plumbing", "b-nut", "installing tube", "install duct", "clamp blocks"] }
+      ]
+    },
+    {
+      "code": "ELE", "name": "Electrical", "defaultType": "VA",
+      "elements": [
+        { "id": "ELE-01", "name": "Wire Routing",      "type": "VA",   "aliases": ["routing wires", "route wire", "wire routing", "pulling wire", "dressing wires", "wire bundle", "routing the bundle"] },
+        { "id": "ELE-02", "name": "Cable Tie Install", "type": "VA",   "aliases": ["zip tie", "zip ties", "cable ties", "tie wraps", "tie wrap", "lacing", "tying wires", "spot ties"] },
+        { "id": "ELE-03", "name": "Connector Mating",  "type": "VA",   "aliases": ["connector", "connectors", "mating connector", "mate connectors", "plugging in", "connect plug", "plug in"] },
+        { "id": "ELE-04", "name": "Terminal Crimping", "type": "VA",   "aliases": ["crimp", "crimping", "crimp terminal", "terminating", "pinning", "contact crimping", "splice", "splicing"] },
+        { "id": "ELE-05", "name": "Wire Marking",      "type": "VA",   "aliases": ["marking wires", "wire labels", "labeling wires", "wire sleeves", "wire id", "marker sleeves"] },
+        { "id": "ELE-06", "name": "Harness Install",   "type": "VA",   "aliases": ["wire harness", "install harness", "installing harness", "harness", "loom"] },
+        { "id": "ELE-07", "name": "Continuity Test",   "type": "NVAN", "aliases": ["continuity", "continuity check", "ring out", "ringing out", "megger", "ohm check", "meter check"] },
+        { "id": "ELE-08", "name": "Grounding/Bonding", "type": "VA",   "aliases": ["grounding", "ground strap", "bonding", "bonding strap", "bond jumper", "ground stud"] }
+      ]
+    },
+    {
+      "code": "TST", "name": "Testing", "defaultType": "VA",
+      "elements": [
+        { "id": "TST-01", "name": "Functional Test",      "type": "VA",   "aliases": ["functional test", "functional check", "function test", "ops check", "operational check"] },
+        { "id": "TST-02", "name": "System Test",          "type": "VA",   "aliases": ["system test", "systems test", "system check"] },
+        { "id": "TST-03", "name": "Leak Test",            "type": "VA",   "aliases": ["leak test", "leak check", "checking for leaks"] },
+        { "id": "TST-04", "name": "Pressure Test",        "type": "VA",   "aliases": ["pressure test", "pressure check", "pressurizing", "proof test", "proof pressure"] },
+        { "id": "TST-05", "name": "Electrical Test",      "type": "VA",   "aliases": ["electrical test", "power on test", "powering up", "insulation resistance", "hipot", "hi-pot"] },
+        { "id": "TST-06", "name": "Test Troubleshooting", "type": "NVAW", "aliases": ["troubleshooting", "troubleshoot", "test failure", "diagnosing", "debugging the test", "test didn't pass"] },
+        { "id": "TST-07", "name": "Test Setup",           "type": "NVAN", "aliases": ["test setup", "setting up the test", "hooking up test equipment", "connecting test set", "test set hookup"] },
+        { "id": "TST-08", "name": "Test Documentation",   "type": "NVAN", "aliases": ["recording test results", "test paperwork", "documenting test", "test data sheet", "writing down readings"] }
+      ]
+    },
+    {
+      "code": "QUA", "name": "Quality", "defaultType": "NVAN",
+      "elements": [
+        { "id": "QUA-01", "name": "Self-Inspection",     "type": "NVAN", "aliases": ["self inspection", "self inspect", "inspecting own work", "checking his work", "checking her work", "checking their work", "inspecting", "inspection", "looking over the work"] },
+        { "id": "QUA-02", "name": "Peer Inspection",     "type": "NVAN", "aliases": ["peer inspection", "peer check", "buddy check", "second set of eyes"] },
+        { "id": "QUA-03", "name": "QA Buyoff",           "type": "NVAN", "aliases": ["buyoff", "buy off", "qa buyoff", "quality buyoff", "inspector buying off", "quality inspector", "qa inspection", "stamp off"] },
+        { "id": "QUA-04", "name": "Dimensional Check",   "type": "NVAN", "aliases": ["measuring", "measure", "measurement", "gap check", "calipers", "edge distance", "dimension check", "feeler gauge", "checking dimensions"] },
+        { "id": "QUA-05", "name": "Torque Verification", "type": "NVAN", "aliases": ["torque check", "verify torque", "verifying torque", "torque stripe", "torque seal", "torque audit"] },
+        { "id": "QUA-06", "name": "NDI/NDT",             "type": "NVAN", "aliases": ["ndi", "ndt", "ultrasonic", "eddy current", "x-ray", "non destructive inspection", "non destructive testing"] },
+        { "id": "QUA-07", "name": "First Article Insp",  "type": "NVAN", "aliases": ["first article", "first article inspection", "fai"] },
+        { "id": "QUA-08", "name": "Sealant Cure Check",  "type": "NVAN", "aliases": ["cure check", "checking cure", "sealant cure", "tack free check", "checking the sealant"] }
+      ]
+    },
+    {
+      "code": "SUP", "name": "Support", "defaultType": "NVAN",
+      "elements": [
+        { "id": "SUP-01", "name": "Reading Work Instr", "type": "NVAN", "aliases": ["reading work instructions", "reading instructions", "work instructions", "reading the plan", "reading planning", "reading the drawing", "reviewing the drawing", "looking at the drawing", "blueprint", "reading the soi", "reviewing instructions"] },
+        { "id": "SUP-02", "name": "Paperwork/Stamps",   "type": "NVAN", "aliases": ["paperwork", "stamping", "stamps", "signing off", "filling out forms", "stamping the paperwork", "writing on the traveler"] },
+        { "id": "SUP-03", "name": "MES/System Entry",   "type": "NVAN", "aliases": ["mes", "system entry", "entering data", "on the computer", "computer", "logging in", "scanning", "kiosk", "typing", "clocking in to the job"] },
+        { "id": "SUP-04", "name": "Tool Calibration",   "type": "NVAN", "aliases": ["calibration", "calibrating", "checking calibration", "tool cal", "setting the torque wrench", "verifying tool calibration"] },
+        { "id": "SUP-05", "name": "Safety Procedure",   "type": "NVAN", "aliases": ["safety", "ppe", "putting on ppe", "safety glasses", "lockout", "tagout", "lockout tagout", "loto", "fall protection", "tying off"] },
+        { "id": "SUP-06", "name": "FOD Check",          "type": "NVAN", "aliases": ["fod", "fod check", "fod walk", "fod sweep", "foreign object", "picking up fod"] },
+        { "id": "SUP-07", "name": "Area Cleanup",       "type": "NVAN", "aliases": ["cleanup", "clean up", "cleaning up", "cleaning", "sweeping", "vacuuming chips", "vacuuming", "housekeeping", "wiping down"] },
+        { "id": "SUP-08", "name": "Shift Handoff",      "type": "NVAN", "aliases": ["shift handoff", "handoff", "hand off", "shift change", "turnover", "pass down", "passdown"] }
+      ]
+    },
+    {
+      "code": "MAT", "name": "Material Handling", "defaultType": "NVAW",
+      "elements": [
+        { "id": "MAT-01", "name": "Gathering Parts",     "type": "NVAW", "aliases": ["gathering parts", "getting parts", "grabbing parts", "collecting parts", "pulling parts", "getting fasteners", "grabbing fasteners"] },
+        { "id": "MAT-02", "name": "Kit Retrieval",       "type": "NVAW", "aliases": ["kit", "getting the kit", "picking up the kit", "kit retrieval", "kit cart", "kitting"] },
+        { "id": "MAT-03", "name": "Tool Retrieval",      "type": "NVAW", "aliases": ["tool retrieval", "getting a tool", "getting tools", "grabbing a tool", "tool crib", "going to the tool crib", "fetching a tool"] },
+        { "id": "MAT-04", "name": "Walking/Travel",      "type": "NVAW", "aliases": ["walking", "walk", "travel", "traveling", "walking away", "leaving the area", "climbing", "climbing the stand", "getting on the stand", "ladder"] },
+        { "id": "MAT-05", "name": "Part Staging",        "type": "NVAW", "aliases": ["staging", "staging parts", "stage parts", "laying out parts", "organizing parts", "setting parts out"] },
+        { "id": "MAT-06", "name": "Searching for Parts", "type": "NVAW", "aliases": ["searching for parts", "looking for parts", "looking for a part", "hunting for parts", "can't find the part", "cannot find part", "looking for fasteners", "searching for fasteners"] },
+        { "id": "MAT-07", "name": "Searching for Tools", "type": "NVAW", "aliases": ["searching for tools", "looking for a tool", "looking for tools", "hunting for a tool", "can't find the tool", "looking for the drill"] },
+        { "id": "MAT-08", "name": "Material Transport",  "type": "NVAW", "aliases": ["material transport", "moving material", "carrying", "transporting", "pushing the cart", "moving the cart", "forklift", "crane move", "hoisting", "lifting"] }
+      ]
+    },
+    {
+      "code": "DLY", "name": "Delays", "defaultType": "NVAD",
+      "elements": [
+        { "id": "DLY-01", "name": "Waiting for QA",    "type": "NVAD", "aliases": ["waiting for qa", "waiting on qa", "waiting for inspection", "waiting on inspection", "waiting for the inspector", "waiting for buyoff", "waiting on quality"] },
+        { "id": "DLY-02", "name": "Waiting for Parts", "type": "NVAD", "aliases": ["waiting for parts", "waiting on parts", "parts shortage", "short parts", "no parts", "waiting for a part"] },
+        { "id": "DLY-03", "name": "Waiting for Tools", "type": "NVAD", "aliases": ["waiting for tools", "waiting on tools", "waiting for a tool", "tool not available", "waiting for the tool"] },
+        { "id": "DLY-04", "name": "Waiting for Engr",  "type": "NVAD", "aliases": ["waiting for engineering", "waiting on engineering", "waiting for engineer", "waiting for an engineer", "waiting for disposition", "waiting for mrb", "waiting on liaison"] },
+        { "id": "DLY-05", "name": "Gathering Tools",   "type": "NVAD", "aliases": ["gathering tools", "collecting tools", "getting tools together", "pulling tools", "tool kit setup"] },
+        { "id": "DLY-06", "name": "Setting Up Equip",  "type": "NVAD", "aliases": ["setting up equipment", "equipment setup", "setting up the stand", "positioning the stand", "rigging", "hooking up air", "air hose"] },
+        { "id": "DLY-07", "name": "Equipment Down",    "type": "NVAD", "aliases": ["equipment down", "equipment failure", "machine down", "tool broke", "broken tool", "drill died", "dead battery", "battery died", "out of air"] },
+        { "id": "DLY-08", "name": "Personal Time",     "type": "NVAD", "aliases": ["personal time", "break", "on break", "lunch", "restroom", "bathroom", "personal", "on the phone"] }
+      ]
+    },
+    {
+      "code": "RWK", "name": "Rework/Other", "defaultType": "NVAW",
+      "elements": [
+        { "id": "RWK-01", "name": "Rework - Drilling",   "type": "NVAW", "aliases": ["redrill", "redrilling", "re-drilling", "rework drilling", "oversize hole", "fixing the hole"] },
+        { "id": "RWK-02", "name": "Rework - Fastener",   "type": "NVAW", "aliases": ["rework fastener", "fastener rework", "removing fastener", "removing rivet", "drilling out rivet", "drilling out fastener", "replacing fastener", "reinstalling fastener"] },
+        { "id": "RWK-03", "name": "Rework - Sealing",    "type": "NVAW", "aliases": ["reseal", "resealing", "re-sealing", "sealant rework", "rework sealant", "removing sealant", "scraping sealant", "fixing sealant"] },
+        { "id": "RWK-04", "name": "Rework - Electrical", "type": "NVAW", "aliases": ["electrical rework", "rework wiring", "rewire", "rewiring", "repinning", "re-terminating", "re-crimp", "recrimp"] },
+        { "id": "RWK-05", "name": "Disassembly",         "type": "NVAW", "aliases": ["disassembly", "disassemble", "disassembling", "taking apart", "taking it apart", "removing the part", "uninstalling", "tear down"] },
+        { "id": "RWK-06", "name": "Setup/Positioning",   "type": "NVAW", "aliases": ["setup", "set up", "positioning", "getting in position", "moving into position", "positioning the part", "setting up the job"] },
+        { "id": "RWK-07", "name": "Training",            "type": "NVAN", "aliases": ["training", "teaching", "ojt", "mentoring", "showing the new mechanic", "explaining the job"] },
+        { "id": "RWK-08", "name": "Other",               "type": "NVAW", "aliases": [], "requiresDescription": true }
+      ]
+    }
+  ]
+}
