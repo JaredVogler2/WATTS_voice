@@ -1,0 +1,19 @@
+{
+  "name": "WATTS Voice — Voice Time Studies",
+  "short_name": "WATTS Voice",
+  "description": "Narrate time studies, map them to WATTS standard elements, and capture photos on a timeline.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#002D72",
+  "theme_color": "#002D72",
+  "lang": "en-US",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "categories": ["productivity", "utilities"]
+}

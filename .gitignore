@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.vercel/
+.env
+.env.*
+tests/e2e/screens/
+*.zip
+rsconnect-python/
+!.env.example

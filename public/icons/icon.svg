@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0033A0"/>
+  <text x="200" y="330" text-anchor="middle" font-family="'Segoe UI', Arial, Helvetica, sans-serif"
+        font-weight="800" font-size="270" fill="#FFFFFF">W</text>
+  <g fill="none" stroke="#6694CC" stroke-width="26" stroke-linecap="round">
+    <path d="M360 200 q36 56 0 112"/>
+    <path d="M404 160 q62 96 0 192"/>
+  </g>
+  <rect x="96" y="380" width="96" height="26" rx="13" fill="#00a884"/>
+  <rect x="200" y="380" width="54" height="26" rx="13" fill="#9aa3ad"/>
+  <rect x="262" y="380" width="70" height="26" rx="13" fill="#f0a92e"/>
+  <rect x="340" y="380" width="76" height="26" rx="13" fill="#e94560"/>
+</svg>

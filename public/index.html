@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#002D72">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WATTS Voice">
+<meta name="description" content="Voice-narrated time studies with photo timeline — next generation of the WATTS tap-to-time study.">
+<title>WATTS Voice</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<noscript>WATTS Voice needs JavaScript enabled.</noscript>
+
+<!-- ═══════════════════════════ HOME / SETUP ═══════════════════════════ -->
+<section id="view-home" class="view light" hidden>
+  <header class="home-top">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="34" height="34">
+      <div><h1>WATTS <span>Voice</span></h1><p>Voice-narrated time studies · Work Analysis, Tracking, Time Standards</p></div>
+    </div>
+    <div class="chips" id="status-chips"></div>
+  </header>
+
+  <main class="home-main">
+    <div id="resume-banner" class="banner" hidden></div>
+
+    <section class="card" id="setup-card">
+      <h2>New time study</h2>
+      <form id="setup-form" autocomplete="off">
+        <div class="grid2">
+          <label>SOI <input name="soi" required inputmode="text" autocapitalize="characters" placeholder="e.g. FAD-2284"></label>
+          <label>Line number <input name="line" required inputmode="numeric" placeholder="e.g. 1047"></label>
+        </div>
+        <label>Job / task being studied <span class="opt">(helps the AI interpret narration)</span>
+          <input name="task" placeholder="e.g. Install aft pressure bulkhead fasteners"></label>
+        <div class="grid3">
+          <label>Analyst BEMSID <input name="analystBemsid" inputmode="numeric"></label>
+          <label>Analyst name <input name="analystName" autocomplete="name"></label>
+          <label>Study date <input name="studyDate" type="date"></label>
+        </div>
+        <fieldset class="mechanics">
+          <legend>Mechanics observed <span class="opt">(rating used for normal time, as in WATTS)</span></legend>
+          <div id="mech-rows"></div>
+          <button type="button" class="btn ghost small" id="btn-add-mech">+ Add mechanic</button>
+        </fieldset>
+        <div class="setup-actions">
+          <button type="submit" class="btn primary big" id="btn-begin">🎙 Begin study</button>
+          <span class="hint">Starts the clock, the microphone and the camera. Narrate what the mechanic is doing; say <b>“photo”</b> to snap a picture, <b>“pause”</b>/<b>“resume”</b>, <b>“scratch that”</b> to undo.</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" id="device-card">
+      <h2>Device check</h2>
+      <p class="muted">Run this once per device (Safari asks for microphone and camera permission).</p>
+      <div class="checks" id="checks"></div>
+      <div class="row">
+        <button class="btn" id="btn-test-mic">Test microphone &amp; speech</button>
+        <button class="btn" id="btn-test-cam">Test camera</button>
+      </div>
+      <div id="test-output" class="test-output" hidden></div>
+      <video id="test-video" playsinline muted hidden></video>
+    </section>
+
+    <section class="card" id="studies-card">
+      <h2>Studies on this device</h2>
+      <div id="study-list" class="study-list"></div>
+    </section>
+
+    <details class="card" id="settings-card">
+      <summary><h2>Settings</h2></summary>
+      <form id="settings-form" class="settings">
+        <label>Voice engine
+          <select name="engine">
+            <option value="auto">Automatic (iPhone speech recognition)</option>
+            <option value="browser">iPhone / Safari speech recognition</option>
+            <option value="server">Server transcription (if Siri &amp; Dictation is blocked)</option>
+            <option value="off">Off — tap and type only</option>
+          </select></label>
+        <label>Listening
+          <select name="listenMode">
+            <option value="continuous">Hands-free (continuous)</option>
+            <option value="ptt">Push-to-talk (noisy areas)</option>
+          </select></label>
+        <label>Language
+          <select name="lang">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-US">Español (US)</option>
+          </select></label>
+        <label>Speech latency compensation (ms)
+          <input name="latencyMs" type="number" min="0" max="2000" step="50"></label>
+        <label class="check"><input type="checkbox" name="aiMapping"> Use AI to map unclear narration to standard elements</label>
+        <label class="check"><input type="checkbox" name="aiVerify"> Also double-check confident on-device matches with AI (more accurate, uses more AI calls)</label>
+        <label>Access code <span class="opt">(if your deployment requires one)</span>
+          <input name="accessCode" type="password" autocomplete="off"></label>
+        <label class="check"><input type="checkbox" name="cameraOnStart"> Turn on the live camera when a study starts</label>
+      </form>
+      <p class="muted small" id="about-text"></p>
+    </details>
+  </main>
+</section>
+
+<!-- ═══════════════════════════ LIVE STUDY ═══════════════════════════ -->
+<section id="view-live" class="view dark" hidden>
+  <header class="live-top">
+    <button class="icon-btn" id="btn-live-home" title="Studies" aria-label="Back to studies">‹</button>
+    <div class="live-id"><b id="live-soi"></b><span id="live-tsid"></span></div>
+    <div class="clocks">
+      <div class="elapsed" id="live-elapsed">00:00</div>
+      <div class="wall" id="live-wall"></div>
+    </div>
+    <span class="rec-pill" id="rec-pill">● REC</span>
+    <button class="btn warn" id="btn-pause">⏸ <span class="lbl">Pause</span></button>
+    <button class="btn danger" id="btn-complete">■ <span class="lbl">Complete</span></button>
+  </header>
+
+  <main class="live-main">
+    <section class="live-left">
+      <div class="current" id="current-card">
+        <div class="cur-band" id="cur-band"></div>
+        <div class="cur-body">
+          <div class="cur-meta"><span id="cur-code"></span><span id="cur-cat"></span><span class="lean" id="cur-lean"></span></div>
+          <div class="cur-name" id="cur-name">Narrate the first element…</div>
+          <div class="cur-foot">
+            <span class="cur-timer" id="cur-timer">00:00</span>
+            <span id="cur-source" class="muted"></span>
+            <button class="btn small ghost" id="btn-cur-edit">Change</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="voice">
+        <button class="mic" id="btn-mic" aria-label="Microphone"><span class="mic-ico">🎙</span><span class="mic-level" id="mic-level"></span></button>
+        <div class="voice-text">
+          <div class="voice-state" id="voice-state">Microphone off</div>
+          <div class="interim" id="interim"></div>
+        </div>
+        <button class="btn ptt" id="btn-ptt" hidden>Hold to talk</button>
+      </div>
+
+      <form class="type-form" id="type-form" autocomplete="off">
+        <input id="type-input" placeholder="Type what you see (e.g. “installing clecos”)" enterkeyhint="send">
+        <button class="btn" type="submit">Add</button>
+        <button class="btn" type="button" id="btn-browse">☰ Elements</button>
+      </form>
+
+      <div class="feed-head"><span>Narration</span><button class="link" id="btn-review-flags" hidden></button></div>
+      <ol class="feed" id="feed"></ol>
+    </section>
+
+    <section class="live-right">
+      <div class="cam" id="cam">
+        <video id="cam-video" playsinline muted autoplay></video>
+        <div class="cam-off" id="cam-off"><span>Camera off</span><button class="btn" id="btn-cam-on">Turn on camera</button></div>
+        <div class="flash" id="flash"></div>
+        <button class="shutter" id="btn-shutter" aria-label="Take photo"></button>
+        <button class="icon-btn cam-flip" id="btn-cam-flip" title="Switch camera" aria-label="Switch camera">⟲</button>
+        <button class="icon-btn cam-close" id="btn-cam-off" title="Turn camera off" aria-label="Turn camera off">✕</button>
+      </div>
+      <div class="cam-bar">
+        <label class="btn small"><input type="file" id="native-photo" accept="image/jpeg" capture="environment" hidden>📷 Native camera</label>
+        <span id="photo-count" class="muted"></span>
+        <img id="last-thumb" class="last-thumb" alt="" hidden>
+      </div>
+    </section>
+  </main>
+
+  <section class="tl-panel">
+    <div class="tl-tools">
+      <div class="seg">
+        <button class="on" data-tlmode="track">Track</button><button data-tlmode="gantt">Gantt</button>
+      </div>
+      <button class="icon-btn" data-zoom="-1" title="Zoom out" aria-label="Zoom out">−</button>
+      <button class="icon-btn" data-zoom="1" title="Zoom in" aria-label="Zoom in">+</button>
+      <button class="btn small" data-fit>Fit</button>
+      <button class="btn small" id="btn-follow">Now ⇥</button>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div id="live-timeline"></div>
+  </section>
+
+  <div class="pause-overlay" id="pause-overlay" hidden>
+    <div><h2>Time study paused</h2><p>Time is not being captured. Say <b>“resume”</b> or tap Continue.</p>
+      <button class="btn primary big" id="btn-resume">▶ Continue</button></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ REVIEW ═══════════════════════════ -->
+<section id="view-review" class="view light" hidden>
+  <header class="review-top">
+    <button class="icon-btn" id="btn-review-home" aria-label="Back to studies">‹</button>
+    <div class="review-title"><h1 id="rv-title"></h1><div class="muted" id="rv-sub"></div></div>
+    <div class="row wrap">
+      <button class="btn primary" id="btn-export-zip">⬇ Study package (.zip)</button>
+      <button class="btn" id="btn-export-watts">WATTS import JSON</button>
+      <button class="btn" id="btn-export-csv">Elements CSV</button>
+      <label class="btn"><input type="file" id="import-photos" accept="image/jpeg" multiple hidden>＋ Import photos</label>
+    </div>
+  </header>
+  <main class="review-main">
+    <div class="rv-cards" id="rv-cards"></div>
+    <div class="rv-flags" id="rv-flags" hidden></div>
+    <section class="card tl-card">
+      <div class="tl-tools">
+        <div class="seg"><button class="on" data-tlmode="track">Track</button><button data-tlmode="gantt">Gantt</button></div>
+        <button class="icon-btn" data-zoom="-1" aria-label="Zoom out">−</button>
+        <button class="icon-btn" data-zoom="1" aria-label="Zoom in">+</button>
+        <button class="btn small" data-fit>Fit</button>
+        <div class="legend" id="rv-legend"></div>
+      </div>
+      <div id="review-timeline"></div>
+    </section>
+    <nav class="tabs" id="rv-tabs">
+      <button class="on" data-tab="sequence">Element sequence</button>
+      <button data-tab="totals">Standard element totals</button>
+      <button data-tab="photos">Photos</button>
+      <button data-tab="transcript">Narration</button>
+      <button data-tab="info">Study info</button>
+    </nav>
+    <section class="card tab-body" id="rv-body"></section>
+  </main>
+</section>
+
+<!-- ═══════════════════════════ DIALOGS ═══════════════════════════ -->
+<dialog id="dlg-picker" class="sheet">
+  <form method="dialog" class="sheet-inner">
+    <header><h3 id="picker-title">Standard elements</h3><button class="icon-btn" value="cancel" aria-label="Close">✕</button></header>
+    <input id="picker-search" type="search" placeholder="Search standard elements (e.g. sealant, torque, waiting)" autocomplete="off">
+    <div id="picker-other" class="picker-other" hidden>
+      <label>Describe “Other” <input id="picker-other-text" placeholder="e.g. Applying Speed Tape"></label>
+      <button class="btn primary" type="button" id="picker-other-ok">Use Other</button>
+    </div>
+    <div id="picker-body" class="picker-body"></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-segment" class="sheet">
+  <form method="dialog" class="sheet-inner">
+    <header><h3>Edit element</h3><button class="icon-btn" value="cancel" aria-label="Close">✕</button></header>
+    <div id="seg-body"></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-photo" class="sheet wide">
+  <form method="dialog" class="sheet-inner">
+    <header><h3 id="photo-title">Photo</h3><button class="icon-btn" value="cancel" aria-label="Close">✕</button></header>
+    <div id="photo-body"></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-complete" class="sheet">
+  <form method="dialog" class="sheet-inner">
+    <header><h3>Complete study?</h3></header>
+    <p id="complete-summary"></p>
+    <label>Observation notes <textarea id="complete-notes" rows="4" placeholder="Anything a reviewer should know (crane delay, new mechanic, ...)"></textarea></label>
+    <div class="row end">
+      <button class="btn" value="cancel">Keep observing</button>
+      <button class="btn danger" value="confirm" id="btn-complete-ok">Complete study</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-confirm" class="sheet">
+  <form method="dialog" class="sheet-inner">
+    <header><h3 id="confirm-title">Are you sure?</h3></header>
+    <p id="confirm-text"></p>
+    <div class="row end">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn danger" value="ok" id="confirm-ok">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
