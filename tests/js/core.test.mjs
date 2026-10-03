@@ -10,6 +10,7 @@ import * as M from '../../public/js/model.js';
 import { crc32, makeZip } from '../../public/js/zip.js';
 import { parseExifTime, exifDateToEpoch } from '../../public/js/camera.js';
 import { encodeWav } from '../../public/js/speech.js';
+import { fileSafe, photoFileNames, studyFolderName } from '../../public/js/export.js';
 
 const catalog = JSON.parse(readFileSync(fileURLToPath(new URL('../../server/catalog.json', import.meta.url)), 'utf8'));
 const matcher = buildMatcher(catalog);
@@ -251,4 +252,49 @@ test('wav: 16 kHz mono header', () => {
   const wav = encodeWav([new Float32Array(4800), new Float32Array(43200)], 48000, 16000);
   assert.equal(wav.size, 44 + 16000 * 2);
   assert.equal(wav.type, 'audio/wav');
+});
+
+// ── Photo folder / file naming ───────────────────────────────────────────────
+test('naming: folder is LINE_SOI', () => {
+  assert.equal(studyFolderName(newStudy()), '1047_FAD-2284');
+  const s = M.createStudy({ soi: 'AB/12:3', line: ' 7 ' });
+  assert.equal(studyFolderName(s), '7_AB-12 - 3');
+});
+
+test('naming: fileSafe keeps spaces, strips characters Files/Windows/email reject', () => {
+  assert.equal(fileSafe('Installing Bolt'), 'Installing Bolt');
+  assert.equal(fileSafe('Clamping/Fixturing'), 'Clamping-Fixturing');
+  assert.equal(fileSafe('Other: Speed Tape'), 'Other - Speed Tape');
+  assert.equal(fileSafe('a?b*c"d<e>f|g#h%i'), 'a-b-c-d-e-f-g-h-i');
+});
+
+test('naming: photos are LINE_SOI_<element #>_<element>.jpg', () => {
+  const s = newStudy();
+  const t0 = s.startedAt;
+  s.photos.push({ id: 'p0', t: t0 + 500 });                  // before any element
+  M.addSegment(s, { t: t0 + 1000, elementId: 'SUP-01' }, t0 + 1000);
+  M.addSegment(s, { t: t0 + 5000, elementId: 'FAS-06' }, t0 + 5000);
+  s.photos.push({ id: 'p1', t: t0 + 6000 }, { id: 'p2', t: t0 + 7000 }, { id: 'p3', t: t0 + 8000 });
+  M.addSegment(s, { t: t0 + 9000, elementId: 'ASM-03' }, t0 + 9000);
+  M.addSegment(s, { t: t0 + 12000, elementId: 'RWK-08', label: 'Speed Tape' }, t0 + 12000);
+  s.photos.push({ id: 'p4', t: t0 + 10000 }, { id: 'p5', t: t0 + 13000 });
+  M.completeStudy(s, t0 + 20000);
+  assert.deepEqual(photoFileNames(s, idx), {
+    p0: '1047_FAD-2284_0_Before first element.jpg',
+    p1: '1047_FAD-2284_2_Installing Bolt.jpg',
+    p2: '1047_FAD-2284_2_Installing Bolt (2).jpg',
+    p3: '1047_FAD-2284_2_Installing Bolt (3).jpg',
+    p4: '1047_FAD-2284_3_Clamping-Fixturing.jpg',
+    p5: '1047_FAD-2284_4_Other - Speed Tape.jpg',
+  });
+});
+
+test('naming: element numbers follow edits to the sequence', () => {
+  const s = newStudy();
+  const t0 = s.startedAt;
+  M.addSegment(s, { t: t0, elementId: 'FAS-01' }, t0);
+  M.addSegment(s, { t: t0 + 5000, elementId: 'FAS-06' }, t0 + 5000);
+  s.photos.push({ id: 'p', t: t0 + 6000 });
+  M.addSegment(s, { t: t0 + 2000, elementId: 'FAS-02' }, t0 + 7000);   // inserted earlier
+  assert.equal(photoFileNames(s, idx).p, '1047_FAD-2284_3_Installing Bolt.jpg');
 });

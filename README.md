@@ -66,6 +66,46 @@ inserting or deleting an element, or picking one of the AI's alternatives.
 Low-confidence mappings are flagged **⚑ review** and listed on the review
 screen.
 
+## Getting photos to the team
+
+All photos for a study use one naming rule:
+
+```
+1047_FAD-2284/                              <- folder: LINE_SOI
+  1047_FAD-2284_2_Drilling Hole.jpg         <- LINE_SOI_<element #>_<element>.jpg
+  1047_FAD-2284_4_Waiting for QA.jpg
+  1047_FAD-2284_4_Waiting for QA (2).jpg    <- second photo during the same element
+  1047_FAD-2284_report.html, _elements.csv, _watts_import.json, _study.json
+```
+
+The element number is the element's place in the study sequence (the `#`
+column of the sequence table and CSV). The element name is the standard
+WATTS name. Characters that Files, Windows or email reject are replaced
+(`Clamping/Fixturing` → `Clamping-Fixturing`).
+
+On the review screen:
+
+- **📁 Save study folder.** Builds `1047_FAD-2284.zip` and opens the share
+  sheet. Choose **Save to Files**, then *On My iPhone* or a OneDrive /
+  SharePoint folder. Tap the .zip in Files and it becomes the folder
+  `1047_FAD-2284`. Saving into a shared OneDrive/SharePoint folder gives
+  teammates the photos without email.
+- **✉ Email photos.** Hands every photo, already named, to the share sheet.
+  Pick Mail, Outlook or Teams. If the photos would exceed about 18 MB, they
+  are shrunk first so the email isn't rejected.
+
+Safari can't write into the Files app or the Photos library on its own; the
+share sheet is the iPhone's way to do it.
+
+**Keeping studies safe.** Studies and photos stay inside the app on the
+phone until you save or email them.
+
+- Add WATTS Voice to the Home Screen. Safari can clear a website's stored
+  data after 7 days without use; Home Screen apps keep theirs. The app shows
+  this tip when it runs in a Safari tab.
+- Save the study folder after each study. The studies list flags
+  *Photos not saved yet* until you do.
+
 ## Run locally
 
 ```bash
@@ -108,7 +148,8 @@ Python ≥ 3.10 is required (the Anthropic SDK 1.x).
 ## Data handling
 
 - Studies and photos are stored **only on the phone** (IndexedDB) until
-  exported. Photos are never uploaded.
+  saved or emailed through the share sheet. Photos are never uploaded to
+  the WATTS Voice server.
 - **Every photo is a standard JPEG (`.jpg`).** Viewfinder shots are encoded
   as JPEG in the page. Native-camera and imported photos are requested as
   JPEG and re-encoded on the phone anyway. iPhone HEIC never reaches the
@@ -148,6 +189,6 @@ public/                The web app (no build step): index.html, css/, js/
   js/speech.js         iOS/Safari speech engine + server-transcription engine
   js/camera.js         Live viewfinder capture, native fallback, EXIF times
   js/timeline.js       Track / Gantt timeline with photo track
-  js/export.js, zip.js Package, CSV, WATTS JSON, offline report
+  js/export.js, zip.js LINE_SOI study folder, photo naming, CSV, WATTS JSON, report
 tests/                 pytest, node unit tests, Playwright e2e
 ```

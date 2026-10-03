@@ -14,7 +14,9 @@ import {
 import { BrowserEngine, ServerEngine, browserSpeechSupported, serverCaptureSupported } from './speech.js';
 import { LiveCamera, liveCameraSupported, readExifTime, resizeImage } from './camera.js';
 import { Timeline } from './timeline.js';
-import { baseName, buildPackage, elementsCsv, shareOrDownload } from './export.js';
+import {
+  buildPackage, buildPhotosZip, elementsCsv, photoFileNames, shareFiles, shareOrDownload, studyFolderName,
+} from './export.js';
 import { clamp, debounce, esc, fmtClock, fmtDuration, fmtElapsed, fmtMinutes, isoDate, uid } from './util.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -282,9 +284,19 @@ function renderChecks() {
   $('#about-text').textContent = `Catalog ${app.catalog.version} · ${app.matcher.elements.length} standard elements · ${navigator.userAgent}`;
 }
 
+function isIOS() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function isStandalone() {
+  return navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+
 async function renderHome() {
   renderChips();
   renderChecks();
+  // Safari may clear a website's stored data after 7 days without use; Home
+  // Screen apps keep theirs.
+  $('#keep-banner').hidden = !(isIOS() && !isStandalone());
   const studies = await listStudies().catch(() => []);
   app.studies = new Map(studies.map(s => [s.id, s]));
   const live = studies.find(s => s.status === 'live' || s.status === 'paused');
@@ -296,7 +308,10 @@ async function renderHome() {
   } else banner.hidden = true;
   $('#study-list').innerHTML = studies.length ? studies.map(s => {
     const flags = needsReviewCount(s);
-    const badge = s.status === 'complete' ? (flags ? `<span class="badge review">${flags} to review</span>` : '<span class="badge">Complete</span>')
+    const saved = (s.exports || []).some(x => x.kind === 'folder' || x.kind === 'email');
+    const badge = s.status === 'complete'
+      ? (flags ? `<span class="badge review">${flags} to review</span>` : '<span class="badge">Complete</span>')
+        + (s.photos.length && !saved ? '<span class="badge review">Photos not saved yet</span>' : saved ? '<span class="badge">Saved</span>' : '')
       : `<span class="badge live">${s.status === 'paused' ? 'Paused' : 'In progress'}</span>`;
     return `<div class="study-item">
       <div class="grow"><div class="t">SOI ${esc(s.setup.soi)} · Line ${esc(s.setup.line)}</div>
@@ -1102,6 +1117,7 @@ async function openPhoto(id) {
       ${at ? `<span class="lean" style="background:${leanColor(at.type)}">${esc(at.type)}</span><b>${esc(at.name)}</b>` : '<span class="muted">Before the first element</span>'}
       <span class="muted">${fmtClock(p.t)} · ${p.timeSource === 'shutter' ? 'exact shutter time' : p.timeSource === 'exif' ? 'camera EXIF time' : 'time of tap'}</span>
     </div>
+    <div class="fname">File name: ${esc(photoFileNames(study, app.idx)[p.id])}</div>
     ${near.length ? `<div class="muted small">Narration around this photo</div><ul class="transcript">${near.map(u => `<li>${fmtElapsed(u.t - study.startedAt)} — “${esc(u.text)}”</li>`).join('')}</ul>` : ''}
     <label>Caption <input id="photo-caption" value="${esc(p.caption || '')}" placeholder="What does this photo show?"></label>
     <div class="row wrap">
@@ -1210,15 +1226,17 @@ function bindReview() {
     $$('#rv-tabs button').forEach(x => x.classList.toggle('on', x === b));
     renderReviewTab();
   };
-  $('#btn-export-zip').onclick = exportZip;
+  $('#btn-save-folder').onclick = saveStudyFolder;
+  $('#btn-email-photos').onclick = emailPhotos;
   $('#btn-export-watts').onclick = () => {
     const s = app.study;
     const blob = new Blob([JSON.stringify(toWattsPayload(s, app.idx), null, 2)], { type: 'application/json' });
-    shareOrDownload(blob, `${baseName(s)}_watts.json`);
+    runShare('watts-json', () => shareOrDownload(blob, `${studyFolderName(s)}_watts_import.json`), 'WATTS import file');
   };
   $('#btn-export-csv').onclick = () => {
     const s = app.study;
-    shareOrDownload(new Blob(['﻿' + elementsCsv(s, app.idx)], { type: 'text/csv' }), `${baseName(s)}_elements.csv`);
+    const blob = new Blob(['﻿' + elementsCsv(s, app.idx)], { type: 'text/csv' });
+    runShare('csv', () => shareOrDownload(blob, `${studyFolderName(s)}_elements.csv`), 'Elements CSV');
   };
   $('#import-photos').addEventListener('change', importPhotos);
 }
@@ -1238,7 +1256,10 @@ function renderReview() {
   const tot = totals(study, app.idx);
   const s = study.setup;
   $('#rv-title').textContent = `SOI ${s.soi} · Line ${s.line}`;
-  $('#rv-sub').textContent = `${study.tsId} · ${s.studyDate} · ${s.analystName || ''} ${s.analystBemsid ? '(' + s.analystBemsid + ')' : ''}${s.task ? ' · ' + s.task : ''}`;
+  const last = (study.exports || []).filter(x => x.kind === 'folder' || x.kind === 'email').pop();
+  $('#rv-sub').textContent = `${study.tsId} · ${s.studyDate} · ${s.analystName || ''} ${s.analystBemsid ? '(' + s.analystBemsid + ')' : ''}${s.task ? ' · ' + s.task : ''}`
+    + (study.photos.length ? ` · photos folder ${studyFolderName(study)}` : '')
+    + (last ? ` · photos last shared ${fmtClock(last.at, false)}` : ' · not saved off the phone yet');
   const obs = tot.observedMs || 1;
   const cards = [`<div class="mcard"><div class="k">Observed time</div><div class="v">${fmtElapsed(tot.observedMs, { forceHours: true })}</div>
     <div class="s">${study.segments.length} elements · ${study.photos.length} photos</div>
@@ -1293,11 +1314,12 @@ function renderReviewTab() {
       <td class="hide-sm">${esc(e.category)}</td><td class="r">${e.count}</td><td class="r">${fmtMinutes(e.netMs)}</td><td class="r">${(100 * e.netMs / obs).toFixed(1)}%</td>
       <td class="r hide-sm">${(e.netMs / e.count / 1000).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
   } else if (tab === 'photos') {
-    body.innerHTML = study.photos.length ? `<div class="gallery">${study.photos.map(p => {
+    const names = photoFileNames(study, app.idx);
+    body.innerHTML = study.photos.length ? `<p class="muted small">Saved and emailed as <b>${esc(studyFolderName(study))}</b> / LINE_SOI_element#_element.jpg</p><div class="gallery">${study.photos.map(p => {
       const at = elementAtTime(study, app.idx, p.t);
       return `<figure data-photo="${p.id}"><img src="${app.thumbUrls.get(p.id) || ''}" alt="" loading="lazy">
         <figcaption><b>${fmtElapsed(p.t - study.startedAt, { forceHours: true })}</b> · ${at ? `<span class="dot" style="background:${leanColor(at.type)}"></span>${esc(at.name)}` : 'before first element'}
-        ${p.caption ? `<br><i>${esc(p.caption)}</i>` : ''}</figcaption></figure>`;
+        ${p.caption ? `<br><i>${esc(p.caption)}</i>` : ''}<div class="fname">${esc(names[p.id])}</div></figcaption></figure>`;
     }).join('')}</div>` : '<div class="empty">No photos. Use “Import photos” to place photos from the camera roll by their capture time.</div>';
   } else if (tab === 'transcript') {
     body.innerHTML = study.utterances.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Time</th><th>Narration</th><th>Result</th></tr></thead><tbody>${study.utterances.map(u => {
@@ -1358,20 +1380,93 @@ async function importPhotos(e) {
   toast(`Placed ${placed} photo${placed === 1 ? '' : 's'} on the timeline${skipped ? ` · ${skipped} skipped (no capture time inside the study window)` : ''}`, placed ? 'ok' : 'warn', { ms: 6000 });
 }
 
-async function exportZip() {
+// ── Getting photos and data off the phone ─────────────────────────────────────
+// Safari can't write into the Files app or Photos by itself, so both flows end
+// in the iPhone share sheet: "Save to Files" (On My iPhone / OneDrive) or
+// Mail / Outlook / Teams.
+const EMAIL_LIMIT_BYTES = 18 * 1024 * 1024;   // under common 20–25 MB attachment limits
+const photoBlob = async id => (await getPhoto(id))?.blob;
+
+function recordExport(study, kind, result) {
+  if (result !== 'shared' && result !== 'downloaded') return;
+  (study.exports || (study.exports = [])).push({ kind, at: Date.now(), via: result });
+  persistNow(study);
+  if (app.view === 'review' && app.study === study) renderReview();
+}
+
+/** Share, and if iOS wants a fresh tap (preparing took too long), offer one. */
+async function runShare(kind, share, readyLabel) {
   const study = app.study;
-  const btn = $('#btn-export-zip');
-  btn.disabled = true;
-  btn.textContent = 'Building package…';
   try {
-    const blob = await buildPackage(study, app.idx, app.catalog, async id => (await getPhoto(id))?.blob);
-    await shareOrDownload(blob, `${baseName(study)}.zip`);
-  } catch (err) {
-    toast(`Export failed: ${err.message}`, 'bad');
+    const result = await share();
+    if (result === 'needs-tap') {
+      toast(`${readyLabel} ready`, 'ok', { action: 'Share', ms: 20000,
+        onAction: async () => recordExport(study, kind, await share().catch(e => toast(e.message, 'bad'))) });
+      return;
+    }
+    recordExport(study, kind, result);
+  } catch (e) {
+    toast(`Could not share: ${e.message}`, 'bad');
+  }
+}
+
+async function withBusy(btn, label, fn) {
+  const html = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = label;
+  try {
+    await fn();
+  } catch (e) {
+    toast(e.message, 'bad');
   } finally {
     btn.disabled = false;
-    btn.textContent = '⬇ Study package (.zip)';
+    btn.innerHTML = html;
   }
+}
+
+/** LINE_SOI.zip → tap it in Files and it becomes the LINE_SOI folder. */
+async function saveStudyFolder() {
+  const study = app.study;
+  const folder = studyFolderName(study);
+  await withBusy($('#btn-save-folder'), 'Building folder…', async () => {
+    const blob = await buildPackage(study, app.idx, app.catalog, photoBlob);
+    const file = new File([blob], `${folder}.zip`, { type: 'application/zip' });
+    await runShare('folder', () => shareFiles([file], { title: folder }), `Folder ${folder}`);
+  });
+}
+
+/** Every photo as its own named JPEG, handed to Mail / Outlook / Teams. */
+async function emailPhotos() {
+  const study = app.study;
+  if (!study.photos.length) { toast('This study has no photos', 'warn'); return; }
+  const folder = studyFolderName(study);
+  await withBusy($('#btn-email-photos'), 'Preparing photos…', async () => {
+    const names = photoFileNames(study, app.idx);
+    let items = [];
+    for (const p of study.photos) {
+      const blob = await photoBlob(p.id);
+      if (blob) items.push({ p, blob });
+    }
+    let total = items.reduce((a, x) => a + x.blob.size, 0);
+    let resizedTo = null;
+    for (const side of [1600, 1200, 900]) {
+      if (total <= EMAIL_LIMIT_BYTES) break;
+      const smaller = [];
+      for (const x of items) smaller.push({ p: x.p, blob: (await resizeImage(x.blob, side, 0.8)).blob });   // one at a time: iPhone memory
+      items = smaller;
+      total = items.reduce((a, x) => a + x.blob.size, 0);
+      resizedTo = side;
+    }
+    const files = items.map(x => new File([x.blob], names[x.p.id], { type: 'image/jpeg', lastModified: x.p.t }));
+    const s = study.setup;
+    const text = `WATTS Voice time study photos: SOI ${s.soi}, Line ${s.line}, ${s.studyDate}${s.task ? ` (${s.task})` : ''}. `
+      + `${files.length} photo${files.length === 1 ? '' : 's'}, named LINE_SOI_element#_element.`;
+    if (resizedTo) toast(`Photos reduced to ${resizedTo}px so the email stays under ~18 MB`, 'info');
+    await runShare('email', () => shareFiles(files, {
+      title: `${folder} photos`, text,
+      fallback: async () => ({ blob: await buildPhotosZip(study, app.idx, photoBlob), name: `${folder}_photos.zip` }),
+    }), `${files.length} photos`);
+  });
 }
 
 // ═══════════════════════════ Dialog wiring ═══════════════════════════════

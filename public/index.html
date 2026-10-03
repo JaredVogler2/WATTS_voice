@@ -30,6 +30,12 @@
 
   <main class="home-main">
     <div id="resume-banner" class="banner" hidden></div>
+    <div id="keep-banner" class="banner info" hidden>
+      <div><b>Keep your studies and photos safe.</b> Add WATTS Voice to your Home Screen (Share ›
+        Add to Home Screen) — Safari can clear website data after 7 days without use; Home Screen apps keep it.
+        After each study, tap <b>📁 Save study folder</b> (Save to Files → On My iPhone or OneDrive) and
+        <b>✉ Email photos</b> to send them to the team.</div>
+    </div>
 
     <section class="card" id="setup-card">
       <h2>New time study</h2>
@@ -199,7 +205,8 @@
     <button class="icon-btn" id="btn-review-home" aria-label="Back to studies">‹</button>
     <div class="review-title"><h1 id="rv-title"></h1><div class="muted" id="rv-sub"></div></div>
     <div class="row wrap">
-      <button class="btn primary" id="btn-export-zip">⬇ Study package (.zip)</button>
+      <button class="btn primary" id="btn-save-folder">📁 Save study folder</button>
+      <button class="btn primary" id="btn-email-photos">✉ Email photos</button>
       <button class="btn" id="btn-export-watts">WATTS import JSON</button>
       <button class="btn" id="btn-export-csv">Elements CSV</button>
       <label class="btn"><input type="file" id="import-photos" accept="image/jpeg" multiple hidden>＋ Import photos</label>

@@ -97,7 +97,19 @@ works offline through the service worker.
   long-press callout on push-to-talk.
 - After the keyboard closes, the live screen scrolls back so the current
   element is on top.
-- Exports use the share sheet (AirDrop / Files / Teams) via
+- Photos go to teammates through the share sheet. **Save study folder**
+  produces `LINE_SOI.zip`; Files turns it into the `LINE_SOI` folder.
+  **Email photos** shares the individual
+  `LINE_SOI_<element #>_<element>.jpg` files with Mail, Outlook or Teams,
+  shrunk if they would exceed about 18 MB. A web page cannot write into
+  Files or Photos without this step. If preparing the files takes so long
+  that iOS no longer counts it as the original tap, a "ready — Share" toast
+  asks for one more tap.
+- Safari may clear a website's storage after 7 days without use. Home
+  Screen apps are exempt, so the app asks Safari-tab users to add it to the
+  Home Screen and flags studies whose photos were never saved off the
+  phone.
+- Other exports use the share sheet (AirDrop / Files / Teams) via
   `navigator.share`, falling back to a download.
 
 ## iPhone validation checklist
@@ -138,5 +150,8 @@ recognizer. Before rollout, verify on physical, company-managed iPhones:
 - **Catalog governance.** `server/catalog.json` mirrors WATTS's hard-coded list
   (`tests/test_api.py` fails if they drift). If WATTS moves its catalog to a
   table, serve it from there.
+- **Automatic team upload.** Photos could go straight to a team SharePoint
+  or OneDrive folder (Microsoft Graph) instead of through the share sheet.
+  That needs an Azure AD app registration and IT approval.
 - **Partial-assist timing.** Partial assist is entered as minutes at setup,
   not tracked live as in WATTS.

@@ -1,6 +1,6 @@
 // WATTS Voice service worker: app shell works offline on the shop floor.
 // Bump VERSION whenever files in public/ change.
-const VERSION = 'wv-2026-10-03-1';
+const VERSION = 'wv-2026-10-03-2';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'icons/icon.svg',
   'js/app.js', 'js/model.js', 'js/matcher.js', 'js/store.js', 'js/speech.js',
