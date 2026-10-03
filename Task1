@@ -1,0 +1,14 @@
+review all of WATTS repostiroy. this will be a next generation version of tap to time sfudy app WATTS and will be voice based task/taskelement selections. the analyst will observe the task in question, and narrate key eyes which will use voice to 
+text and voice through LLM (possibly voice to text to LLM or voice dorect through LLM), and map actions to time study element standards.  the standardized list is impotant for analyses later so we arent comparing "sealing" vs "sealant work" for example they meed to be standardized. 
+
+while narrating, the user will be able to capture pictures throughout the timr study, and similar to video editing software a 
+
+timeline will be developed like a gantt chart
+
+of the various elements, color coded bars if value added, non value added, value added necessary, non vue added delays/rework etc. 
+
+along the timeline thr snapped photos will be present with the action being performed at the time the picture was taken so the time the
+
+study begins and a continuous timer then when photos are taken its understood where they are in relation to the observation
+
+this will be deployed as a web app hosted on posit and vercel. thr users will be doing the time study on safari. voice dictation, LLM, picture capture are all extremely important.  ideally also useable on edge/mozilla/chrome browsers. 
