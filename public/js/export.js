@@ -1,8 +1,8 @@
 // Study exports: WATTS import JSON, element CSV, and a self-contained package
 // (.zip with JSON, CSV, photos and an offline HTML report).
 
-import { deriveSegments, toWattsPayload, totals, elementAtTime } from './model.js';
-import { esc, fmtClock, fmtElapsed, fmtMinutes, safeFilename } from './util.js';
+import { deriveSegments, toWattsPayload, totals, elementAtTime, segmentIndexAt } from './model.js';
+import { esc, fmtClock, fmtElapsed, fmtMinutes } from './util.js';
 import { makeZip } from './zip.js';
 
 function csvCell(v) {
@@ -30,9 +30,42 @@ export function elementsCsv(study, idx, now = Date.now()) {
   return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
 }
 
-export function photoFilename(study, photo, i) {
-  const off = fmtElapsed(photo.t - study.startedAt, { forceHours: true }).replace(/:/g, '-');
-  return `photos/${String(i + 1).padStart(3, '0')}_${off}.jpg`;
+// ── File naming ──────────────────────────────────────────────────────────────
+/** A file-name part that is valid on iPhone Files, Windows and email (spaces kept). */
+export function fileSafe(s) {
+  return String(s ?? '')
+    .replace(/\s*:\s*/g, ' - ')                    // "Other: Speed Tape" -> "Other - Speed Tape"
+    .replace(/[\\/*?"<>|#%\u0000-\u001f]+/g, '-')    // "Clamping/Fixturing" -> "Clamping-Fixturing"
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.-]+|[\s.-]+$/g, '');
+}
+
+/** Folder for everything exported from a study: LINE_SOI, e.g. "1047_FAD-2284". */
+export function studyFolderName(study) {
+  return `${fileSafe(study.setup.line) || 'LINE'}_${fileSafe(study.setup.soi) || 'SOI'}`;
+}
+
+/**
+ * Photo file names: LINE_SOI_<element #>_<element>.jpg, e.g.
+ * "1047_FAD-2284_5_Installing Bolt.jpg". The element number is the element's
+ * place in the study sequence (as in the sequence table and CSV); a second
+ * photo during the same element becomes "... (2).jpg". Photos taken before
+ * the first element use 0. Returns {photoId: fileName}.
+ */
+export function photoFileNames(study, idx) {
+  const folder = studyFolderName(study);
+  const segs = deriveSegments(study, idx);
+  const used = new Map();
+  const names = {};
+  for (const p of [...study.photos].sort((a, b) => a.t - b.t)) {
+    const i = segmentIndexAt(study, p.t);
+    const desc = i >= 0 ? segs[i].name : 'Before first element';
+    const base = `${folder}_${i + 1}_${fileSafe(desc) || 'Element'}`;
+    const n = (used.get(base) || 0) + 1;
+    used.set(base, n);
+    names[p.id] = n === 1 ? `${base}.jpg` : `${base} (${n}).jpg`;
+  }
+  return names;
 }
 
 export function downloadBlob(blob, filename) {
@@ -47,41 +80,65 @@ export function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-/** Share sheet on iPad (AirDrop / Files / Teams), download elsewhere. */
-export async function shareOrDownload(blob, filename) {
-  try {
-    const file = new File([blob], filename, { type: blob.type });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename });
+/**
+ * Hand files to the iPhone share sheet (Mail, Outlook, Teams, Save to Files,
+ * AirDrop); download where file sharing isn't available. Resolves
+ * 'shared' | 'cancelled' | 'downloaded' | 'needs-tap'. 'needs-tap' means iOS
+ * refused because preparing the files outlasted the original tap — call
+ * again from a new tap.
+ */
+export async function shareFiles(files, { title = '', text = '', fallback } = {}) {
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try {
+      await navigator.share({ files, title, text });
       return 'shared';
+    } catch (e) {
+      if (e && e.name === 'AbortError') return 'cancelled';
+      if (e && e.name === 'NotAllowedError') return 'needs-tap';
+      throw e;
     }
-  } catch (e) {
-    if (e && e.name === 'AbortError') return 'cancelled';
   }
-  downloadBlob(blob, filename);
+  if (files.length === 1) downloadBlob(files[0], files[0].name);
+  else if (fallback) { const f = await fallback(); downloadBlob(f.blob, f.name); }
   return 'downloaded';
 }
 
-export function baseName(study) {
-  return safeFilename(`WATTSVoice_${study.setup.soi || 'SOI'}_L${study.setup.line || ''}_${study.setup.studyDate || ''}`);
+export function shareOrDownload(blob, filename, opts = {}) {
+  return shareFiles([new File([blob], filename, { type: blob.type })], { title: filename, ...opts });
 }
 
-export async function buildPackage(study, idx, catalog, getPhotoBlob, now = Date.now()) {
+/** Zip with just the photos, inside the LINE_SOI folder. */
+export async function buildPhotosZip(study, idx, getPhotoBlob) {
+  const folder = studyFolderName(study);
+  const names = photoFileNames(study, idx);
   const files = [];
-  const photoNames = {};
-  for (let i = 0; i < study.photos.length; i++) {
-    const p = study.photos[i];
+  for (const p of study.photos) {
+    const blob = await getPhotoBlob(p.id);
+    if (blob) files.push({ name: `${folder}/${names[p.id]}`, data: blob, date: new Date(p.t) });
+  }
+  return makeZip(files);
+}
+
+/**
+ * The study folder as a .zip: LINE_SOI/ with the photos (named per
+ * photoFileNames), the offline report, CSV and WATTS import JSON. Tapping the
+ * .zip in the iPhone Files app turns it into that folder.
+ */
+export async function buildPackage(study, idx, catalog, getPhotoBlob, now = Date.now()) {
+  const folder = studyFolderName(study);
+  const photoNames = photoFileNames(study, idx);
+  const files = [];
+  for (const p of study.photos) {
     const blob = await getPhotoBlob(p.id);
     if (!blob) continue;
-    photoNames[p.id] = photoFilename(study, p, i);
-    files.push({ name: photoNames[p.id], data: blob, date: new Date(p.t) });
+    files.push({ name: `${folder}/${photoNames[p.id]}`, data: blob, date: new Date(p.t) });
   }
   const payload = toWattsPayload(study, idx, now);
   files.unshift(
-    { name: 'report.html', data: reportHtml(study, idx, catalog, photoNames, now) },
-    { name: 'watts_import.json', data: JSON.stringify(payload, null, 2) },
-    { name: 'elements.csv', data: elementsCsv(study, idx, now) },
-    { name: 'study.json', data: JSON.stringify({ ...study, photoFiles: photoNames }, null, 2) },
+    { name: `${folder}/${folder}_report.html`, data: reportHtml(study, idx, catalog, photoNames, now) },
+    { name: `${folder}/${folder}_elements.csv`, data: '\ufeff' + elementsCsv(study, idx, now) },
+    { name: `${folder}/${folder}_watts_import.json`, data: JSON.stringify(payload, null, 2) },
+    { name: `${folder}/${folder}_study.json`, data: JSON.stringify({ ...study, photoFiles: photoNames }, null, 2) },
   );
   return makeZip(files);
 }
@@ -119,10 +176,10 @@ export function reportHtml(study, idx, catalog, photoNames, now = Date.now()) {
       <td class="r">${pct(e.netMs)}%</td></tr>`).join('');
   const photos = study.photos.map(p => {
     const at = elementAtTime(study, idx, p.t);
-    return `<figure><img src="${esc(photoNames[p.id] || '')}" alt="">
+    return `<figure><img src="${esc(encodeURIComponent(photoNames[p.id] || ''))}" alt="">
       <figcaption><b>${fmtElapsed(p.t - study.startedAt)}</b> · ${esc(fmtClock(p.t))}<br>
       ${at ? `<span class="dot" style="background:${lean[at.type]?.color}"></span>${esc(at.name)}` : 'Before first element'}
-      ${p.caption ? `<br><i>${esc(p.caption)}</i>` : ''}</figcaption></figure>`;
+      ${p.caption ? `<br><i>${esc(p.caption)}</i>` : ''}<br><span style="color:#777">${esc(photoNames[p.id] || '')}</span></figcaption></figure>`;
   }).join('');
   const s = study.setup;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">

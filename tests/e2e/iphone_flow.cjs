@@ -25,6 +25,16 @@ const FAKE_SPEECH = `
     stop() { if (active === this) active = null; setTimeout(() => this.onend && this.onend(), 10); }
     abort() { this.stop(); }
   }
+  // Share sheet stand-in: __shareMode 'share' records what would be handed to
+  // Mail/Files; 'download' makes canShare() false so the download fallback runs.
+  window.__shareMode = 'download';
+  window.__shared = null;
+  Object.defineProperty(navigator, 'canShare', { configurable: true,
+    value: (data) => window.__shareMode === 'share' && !!(data && data.files) });
+  Object.defineProperty(navigator, 'share', { configurable: true, value: async (data) => {
+    window.__shared = { title: data.title, text: data.text,
+      files: data.files.map(f => ({ name: f.name, type: f.type, size: f.size })) };
+  } });
   window.webkitSpeechRecognition = FakeRecognition;
   window.SpeechRecognition = FakeRecognition;
   window.__say = (text, { final = true } = {}) => {
@@ -75,6 +85,7 @@ const FAKE_SPEECH = `
   await page.goto(BASE);
   await page.waitForSelector('#view-home:not([hidden])');
   await page.screenshot({ path: path.join(OUT, '01_home.png'), fullPage: true });
+  check('keep-safe tip shown in Safari (not Home Screen)', await page.isVisible('#keep-banner'));
 
   await page.fill('input[name=soi]', 'FAD-2284');
   await page.fill('input[name=line]', '1047');
@@ -158,29 +169,61 @@ const FAKE_SPEECH = `
   await page.screenshot({ path: path.join(OUT, '09_totals.png'), fullPage: true });
   await page.click('#rv-tabs [data-tab=photos]');
   check('photo gallery', (await page.locator('#rv-body figure').count()) === 2);
+  await page.screenshot({ path: path.join(OUT, '09b_photos.png'), fullPage: true });
   await page.click('#rv-tabs [data-tab=transcript]');
   await page.screenshot({ path: path.join(OUT, '10_transcript.png'), fullPage: true });
 
-  // Exports
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-export-zip')]);
-  const zipPath = path.join(OUT, 'package.zip');
+  // Exports: study folder LINE_SOI with photos LINE_SOI_<element #>_<element>.jpg
+  const FOLDER = '1047_FAD-2284';
+  const EXPECTED_PHOTOS = [`${FOLDER}_2_Drilling Hole.jpg`, `${FOLDER}_4_Waiting for QA.jpg`];
+  const readZip = (file) => {
+    const zbuf = fs.readFileSync(file);
+    const entries = [];
+    for (let o = 0; zbuf.readUInt32LE(o) === 0x04034b50;) {
+      const size = zbuf.readUInt32LE(o + 18), nlen = zbuf.readUInt16LE(o + 26), xlen = zbuf.readUInt16LE(o + 28);
+      const name = zbuf.toString('utf8', o + 30, o + 30 + nlen);
+      entries.push({ name, data: zbuf.subarray(o + 30 + nlen + xlen, o + 30 + nlen + xlen + size) });
+      o += 30 + nlen + xlen + size;
+    }
+    return entries;
+  };
+  const isJpeg = d => d[0] === 0xFF && d[1] === 0xD8 && d[2] === 0xFF;
+  await page.click('#rv-tabs [data-tab=photos]');
+  check('gallery shows file names', (await page.textContent('#rv-body')).includes(EXPECTED_PHOTOS[0]));
+
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btn-save-folder')]);
+  check('study folder zip named LINE_SOI', dl.suggestedFilename() === `${FOLDER}.zip`, dl.suggestedFilename());
+  const zipPath = path.join(OUT, `${FOLDER}.zip`);
   await dl.saveAs(zipPath);
-  check('zip exported', fs.statSync(zipPath).size > 1000, String(fs.statSync(zipPath).size));
-  // Walk the (stored) zip: every photo must be a real JPEG (FF D8 FF), never HEIC.
-  const zbuf = fs.readFileSync(zipPath);
-  const entries = [];
-  for (let o = 0; zbuf.readUInt32LE(o) === 0x04034b50;) {
-    const size = zbuf.readUInt32LE(o + 18), nlen = zbuf.readUInt16LE(o + 26), xlen = zbuf.readUInt16LE(o + 28);
-    const name = zbuf.toString('utf8', o + 30, o + 30 + nlen);
-    const data = zbuf.subarray(o + 30 + nlen + xlen, o + 30 + nlen + xlen + size);
-    entries.push({ name, data });
-    o += 30 + nlen + xlen + size;
-  }
-  const photos = entries.filter(e => e.name.startsWith('photos/'));
-  check('zip contents', ['report.html', 'watts_import.json', 'elements.csv', 'study.json'].every(n => entries.some(e => e.name === n)),
-    entries.map(e => e.name).join(','));
-  check('exported photos are JPEG', photos.length === 2 && photos.every(e => e.name.endsWith('.jpg')
-    && e.data[0] === 0xFF && e.data[1] === 0xD8 && e.data[2] === 0xFF), photos.map(e => e.name).join(','));
+  const entries = readZip(zipPath);
+  const names = entries.map(e => e.name);
+  check('everything inside the LINE_SOI folder', names.every(n => n.startsWith(`${FOLDER}/`)), names.join(','));
+  check('folder has report, CSV, WATTS JSON, study JSON',
+    ['report.html', 'elements.csv', 'watts_import.json', 'study.json'].every(k => names.includes(`${FOLDER}/${FOLDER}_${k}`)), names.join(','));
+  const photos = entries.filter(e => e.name.endsWith('.jpg'));
+  check('photos named LINE_SOI_element#_element.jpg', JSON.stringify(photos.map(e => e.name).sort())
+    === JSON.stringify(EXPECTED_PHOTOS.map(n => `${FOLDER}/${n}`).sort()), photos.map(e => e.name).join(','));
+  check('exported photos are JPEG', photos.length === 2 && photos.every(e => isJpeg(e.data)));
+  const report = entries.find(e => e.name.endsWith('_report.html')).data.toString('utf8');
+  check('report links the renamed photos', report.includes(encodeURIComponent(EXPECTED_PHOTOS[0])));
+
+  // Email photos through the share sheet (iPhone path)
+  await page.evaluate(() => { window.__shareMode = 'share'; window.__shared = null; });
+  await page.click('#btn-email-photos');
+  await page.waitForFunction(() => window.__shared, null, { timeout: 10000 });
+  const shared = await page.evaluate(() => window.__shared);
+  check('email hands each photo to the share sheet by name', JSON.stringify(shared.files.map(f => f.name).sort())
+    === JSON.stringify([...EXPECTED_PHOTOS].sort()), JSON.stringify(shared.files));
+  check('emailed files are image/jpeg', shared.files.every(f => f.type === 'image/jpeg' && f.size > 1000));
+  check('email text names the study', shared.text.includes('FAD-2284') && shared.text.includes('1047'), shared.text);
+  // Desktop fallback: photos-only zip in the same folder
+  await page.evaluate(() => { window.__shareMode = 'download'; });
+  const [dlp] = await Promise.all([page.waitForEvent('download'), page.click('#btn-email-photos')]);
+  const photosZip = path.join(OUT, `${FOLDER}_photos.zip`);
+  await dlp.saveAs(photosZip);
+  check('photo fallback zip', dlp.suggestedFilename() === `${FOLDER}_photos.zip`
+    && readZip(photosZip).every(e => e.name.startsWith(`${FOLDER}/${FOLDER}_`) && isJpeg(e.data)));
+  check('review shows the study was saved', (await page.textContent('#rv-sub')).includes('last'), await page.textContent('#rv-sub'));
   const [dl2] = await Promise.all([page.waitForEvent('download'), page.click('#btn-export-watts')]);
   const wattsPath = path.join(OUT, 'watts.json');
   await dl2.saveAs(wattsPath);

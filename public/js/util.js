@@ -61,7 +61,3 @@ export function debounce(fn, ms) {
   wrapped.flush = (...args) => { clearTimeout(t); t = null; fn(...args); };
   return wrapped;
 }
-
-export function safeFilename(s) {
-  return String(s || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'study';
-}
